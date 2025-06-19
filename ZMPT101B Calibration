@@ -1,5 +1,5 @@
 
-#define ZMPT101B_PIN 35
+#define ZMPT101B_PIN 35 
 
 void setup()
 {
@@ -13,5 +13,5 @@ analogSetAttenuation(ADC_11db);
 void loop()
 {
   Serial.println(analogRead(ZMPT101B_PIN));
-  delayMicroseconds(500);
+  delayMicroseconds(500); //edit the sampling rate for higher resolution (keep >400)
 }
