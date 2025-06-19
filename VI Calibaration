@@ -1,1 +1,267 @@
-n
+/* ----------------------------------------------------
+
+   3-Phase Current Sensor Calibration with Optional Voltage Sensors
+
+   ----------------------------------------------------
+
+   Instructions:
+
+
+
+   1. Hardware Setup:
+
+      - Connect a single voltage sensor (like ZMPT101B) to analog pin V1 (GPIO 34).
+
+      - Connect three current sensors (e.g., SCT-013) to GPIO pins I1, I2, I3.
+
+      - If you want to add additional voltage sensors in the future (V2, V3), follow the comments provided in this code.
+
+
+
+   2. Use a "pure" resistive load for calibration:
+
+
+
+   3. Calibration:
+
+      - Start with CV1 = 1000 and CI1/CI2/CI3 = 1000.
+
+      - Use a multimeter/ammeter for reference.
+
+      - Use this formula to calibrate:
+
+         New CVx = Vr * CVold / Vesp
+
+         New CIx = Ir * CIold / Iesp
+
+         (Where Vr and Ir are your reference voltage/current,
+
+          and Vesp, Iesp are readings from ESP32)
+
+
+
+   4. Add your calculated CVx and CIx values back into the code and re-upload.
+
+
+
+   5. If you add voltage sensors for V2 or V3 later:
+
+      - Uncomment the relevant sections.
+
+      - Wire ZMPT101B modules to free analog GPIOs.
+
+      - Calibrate CV2 and CV3 just like CV1.
+
+
+
+   6. Baud rate: Keep Serial Monitor at 115200.
+
+*/
+
+
+
+#include "EmonLib.h"  // Include EmonLib library for power monitoring
+
+#define ESP32         // For ESP32-specific ADC handling
+
+
+
+// ---------------------- PIN Configuration ----------------------
+
+#define V1 34    // Voltage sensor 1 (shared across all phases initially)
+
+
+
+// Uncomment and configure if adding voltage sensors later:
+
+// #define V2 36    // Voltage sensor 2 (phase 2)
+
+// #define V3 39    // Voltage sensor 3 (phase 3)
+
+
+
+#define I1 35    // Current sensor 1 (CT1)
+
+#define I2 32    // Current sensor 2 (CT2)
+
+#define I3 33    // Current sensor 3 (CT3)
+
+
+
+// ---------------------- Calibration Settings ----------------------
+
+#define CV1 1000   // Voltage calibration factor (Start with 1000)
+
+#define CI1 1000   // Current calibration for CT1
+
+#define CI2 1000   // Current calibration for CT2
+
+#define CI3 1000   // Current calibration for CT3
+
+
+
+// Uncomment if adding extra voltage sensors later:
+
+// #define CV2 1000
+
+// #define CV3 1000
+
+
+
+// ---------------------- EnergyMonitor Objects ----------------------
+
+EnergyMonitor emon1;  // Phase 1 monitor
+
+EnergyMonitor emon2;  // Phase 2 monitor
+
+EnergyMonitor emon3;  // Phase 3 monitor
+
+
+
+// ---------------------- Setup ----------------------
+
+void setup() {
+
+  Serial.begin(115200);  // Start serial communication
+
+
+
+  // ADC Attenuation Setup (ESP32-specific)
+
+  analogSetPinAttenuation(V1, ADC_11db);  // Up to ~3.3V for ZMPT101B
+
+  analogSetPinAttenuation(I1, ADC_11db);  // For SCT013
+
+  analogSetPinAttenuation(I2, ADC_11db);
+
+  analogSetPinAttenuation(I3, ADC_11db);
+
+
+
+  // Uncomment below if using additional voltage sensors:
+
+  // analogSetPinAttenuation(V2, ADC_11db);
+
+  // analogSetPinAttenuation(V3, ADC_11db);
+
+
+
+  // ---------------- Phase 1 Setup ----------------
+
+  emon1.voltage(V1, CV1, 1.732);  // voltage(pin, cal, phase_shift)
+
+  emon1.current(I1, CI1);         // current(pin, cal)
+
+
+
+  // ---------------- Phase 2 Setup ----------------
+
+  emon2.voltage(V1, CV1, 1.732);  // Using same V1 for now
+
+  // emon2.voltage(V2, CV2, 1.732);  // <--- Use this if V2 is added
+
+  emon2.current(I2, CI2);
+
+
+
+  // ---------------- Phase 3 Setup ----------------
+
+  emon3.voltage(V1, CV1, 1.732);  // Using same V1 for now
+
+  // emon3.voltage(V3, CV3, 1.732);  // <--- Use this if V3 is added
+
+  emon3.current(I3, CI3);
+
+}
+
+
+
+// ---------------------- Main Loop ----------------------
+
+void loop() {
+
+  Serial.println("------------");
+
+
+
+  // Phase 1 Measurement
+
+  emon1.calcVI(120, 2000);  // (Crossings, Timeout in ms)
+
+  Serial.print("V1: ");
+
+  Serial.print(emon1.Vrms);
+
+  Serial.print(" V, I1: ");
+
+  Serial.print(emon1.Irms);
+
+  Serial.print(" A, Real: ");
+
+  Serial.print(emon1.realPower);
+
+  Serial.print(" W, Apparent: ");
+
+  Serial.print(emon1.apparentPower);
+
+  Serial.print(" VA, PF: ");
+
+  Serial.println(emon1.powerFactor);
+
+
+
+  // Phase 2 Measurement
+
+  emon2.calcVI(120, 2000);
+
+  Serial.print("V2 (via V1): ");
+
+  Serial.print(emon2.Vrms);
+
+  Serial.print(" V, I2: ");
+
+  Serial.print(emon2.Irms);
+
+  Serial.print(" A, Real: ");
+
+  Serial.print(emon2.realPower);
+
+  Serial.print(" W, Apparent: ");
+
+  Serial.print(emon2.apparentPower);
+
+  Serial.print(" VA, PF: ");
+
+  Serial.println(emon2.powerFactor);
+
+
+
+  // Phase 3 Measurement
+
+  emon3.calcVI(120, 2000);
+
+  Serial.print("V3 (via V1): ");
+
+  Serial.print(emon3.Vrms);
+
+  Serial.print(" V, I3: ");
+
+  Serial.print(emon3.Irms);
+
+  Serial.print(" A, Real: ");
+
+  Serial.print(emon3.realPower);
+
+  Serial.print(" W, Apparent: ");
+
+  Serial.print(emon3.apparentPower);
+
+  Serial.print(" VA, PF: ");
+
+  Serial.println(emon3.powerFactor);
+
+
+
+  delay(1000);  // Delay between readings
+
+}
