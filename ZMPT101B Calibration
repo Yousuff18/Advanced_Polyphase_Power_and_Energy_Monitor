@@ -1,11 +1,11 @@
-
+// if using more than one voltage sensor, calibrate using the same method individually
 #define ZMPT101B_PIN 35 
 
 void setup()
 {
   Serial.begin(115200);
 
-analogSetAttenuation(ADC_11db);
+  analogSetAttenuation(ADC_11db);
 
   pinMode(ZMPT101B_PIN, INPUT);
 }
@@ -13,5 +13,5 @@ analogSetAttenuation(ADC_11db);
 void loop()
 {
   Serial.println(analogRead(ZMPT101B_PIN));
-  delayMicroseconds(500); //edit the sampling rate for higher resolution (keep >400)
+  delayMicroseconds(500); // edit the sampling rate for higher resolution (keep >400)
 }
