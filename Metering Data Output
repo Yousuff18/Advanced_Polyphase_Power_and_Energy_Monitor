@@ -1,0 +1,98 @@
+#include <Arduino.h>
+#include "EmonLib.h"
+#include "esp_task_wdt.h"
+
+// Pin definitions
+#define V1 34  // Shared voltage sensor pin for all 3 phases
+#define I1 35  // Current sensor for phase 1
+#define I2 32  // Current sensor for phase 2
+#define I3 33  // Current sensor for phase 3
+
+// Calibration constants
+#define CV1 137     // Voltage calibration
+#define CI1 25.2    // Current calibration for phase 1
+#define CI2 25.9    // Current calibration for phase 2
+#define CI3 26.0    // Current calibration for phase 3
+
+// Sampling parameters
+#define CROSSINGS 120
+#define POLLING_INTERVAL 30000  // 30 seconds
+
+// EnergyMonitor instances
+EnergyMonitor emon1;
+EnergyMonitor emon2;
+EnergyMonitor emon3;
+
+unsigned long last_poll_time = 0;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("Power sensor system initializing...");
+
+  // Set ADC attenuation (0–3.3V input range)
+  analogSetPinAttenuation(V1, ADC_11db);
+  analogSetPinAttenuation(I1, ADC_11db);
+  analogSetPinAttenuation(I2, ADC_11db);
+  analogSetPinAttenuation(I3, ADC_11db);
+
+  // Configure watchdog timer (ESP-IDF v5+ compatible)
+  esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = 5000,        // 5 seconds timeout
+    .idle_core_mask = 0b11,    // Watch both cores
+    .trigger_panic = true      // Restart if not reset
+  };
+  esp_task_wdt_init(&wdt_config);
+  esp_task_wdt_add(NULL);
+
+  // Initialize sensors (voltage shared for all phases)
+  emon1.voltage(V1, CV1, 1.732);
+  emon1.current(I1, CI1);
+
+  emon2.voltage(V1, CV1, 1.732);
+  emon2.current(I2, CI2);
+
+  emon3.voltage(V1, CV1, 1.732);
+  emon3.current(I3, CI3);
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  if (now - last_poll_time >= POLLING_INTERVAL) {
+    last_poll_time = now;
+
+    Serial.println("---------- New Reading ----------");
+
+    // Phase 1
+    emon1.calcVI(CROSSINGS, 2000);
+    Serial.printf("Phase 1 - V: %.2f V | I: %.2f A | P: %.2f W | PF: %.2f\n",
+                  emon1.Vrms, emon1.Irms, emon1.realPower, emon1.powerFactor);
+    esp_task_wdt_reset();
+
+    // Phase 2
+    emon2.calcVI(CROSSINGS, 2000);
+    Serial.printf("Phase 2 - V: %.2f V | I: %.2f A | P: %.2f W | PF: %.2f\n",
+                  emon2.Vrms, emon2.Irms, emon2.realPower, emon2.powerFactor);
+    esp_task_wdt_reset();
+
+    // Phase 3
+    emon3.calcVI(CROSSINGS, 2000);
+    Serial.printf("Phase 3 - V: %.2f V | I: %.2f A | P: %.2f W | PF: %.2f\n",
+                  emon3.Vrms, emon3.Irms, emon3.realPower, emon3.powerFactor);
+    esp_task_wdt_reset();
+
+    // Totals
+    float total_real_power = emon1.realPower + emon2.realPower + emon3.realPower;
+    float total_apparent_power = emon1.apparentPower + emon2.apparentPower + emon3.apparentPower;
+    float total_current = emon1.Irms + emon2.Irms + emon3.Irms;
+
+    Serial.printf("TOTAL    - P: %.2f W | S: %.2f VA | I: %.2f A\n",
+                  total_real_power, total_apparent_power, total_current);
+
+    Serial.println("---------------------------------\n");
+  }
+
+  // Feed the watchdog
+  esp_task_wdt_reset();
+}
