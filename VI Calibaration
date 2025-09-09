@@ -37,6 +37,10 @@
 // ------------------ Monitor Object ------------------
 EnergyMonitor emon1;
 
+// ------------------ Energy Tracking ------------------
+double accumulatedEnergy_kWh = 0.0;  // Total energy consumed (kWh)
+unsigned long lastMillis = 0;
+
 void setup() {
   Serial.begin(115200);
 
@@ -47,6 +51,8 @@ void setup() {
   // Setup voltage and current measurement
   emon1.voltage(V1, CV1, 1.732);  // pin, calibration, phase shift
   emon1.current(I1, CI1);         // pin, calibration
+
+  lastMillis = millis();
 }
 
 void loop() {
@@ -58,7 +64,21 @@ void loop() {
   Serial.print(emon1.Vrms);
   Serial.print(" V | Irms: ");
   Serial.print(emon1.Irms);
-  Serial.println(" A");
+  Serial.print(" A | Real Power: ");
+  Serial.print(emon1.realPower);
+  Serial.print(" W");
+
+  // ----- Energy Calculation -----
+  unsigned long currentMillis = millis();
+  double elapsedHours = (currentMillis - lastMillis) / 3600000.0; // ms → hours
+  lastMillis = currentMillis;
+
+  // Energy = Power × Time
+  accumulatedEnergy_kWh += (emon1.realPower * elapsedHours) / 1000.0;
+
+  Serial.print(" | Energy: ");
+  Serial.print(accumulatedEnergy_kWh, 6); // 6 decimal places for precision
+  Serial.println(" kWh");
 
   delay(1000);
 }
