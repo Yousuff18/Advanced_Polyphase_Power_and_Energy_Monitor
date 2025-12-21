@@ -10,4 +10,4 @@ https://github.com/danpeig/ESP32EnergyMonitor
 
 <img width="800" height="472" alt="image" src="https://github.com/user-attachments/assets/4b7bb630-1d22-485a-806e-11d44e234779" />
 
-https://media.licdn.com/dms/image/v2/D562DAQH6YFn_1h435A/profile-treasury-image-shrink_800_800/B56ZeOwLOLG0AY-/0/1750446684051?e=1766941200&v=beta&t=EICVw9gvtNj46OSq1BMGmnjAjzv0NwtVSWQfXLiSlys
+<img width="800" height="499" alt="image" src="https://github.com/user-attachments/assets/76c91c3a-a08e-4b71-88f1-bd53f9a55c1a" />
